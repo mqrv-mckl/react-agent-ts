@@ -1,34 +1,23 @@
 import dotenv from "dotenv";
 import { Agent, run } from "@openai/agents";
+import { add_element_to_app } from "./tools.js";
 
 dotenv.config();
 
 // define agents
-
-const uiuxAgent = new Agent({
-  name: "UI/UX Expert",
-  instructions: "You provide assistance for designing UI/UX",
-});
-
-const webdevAgent = new Agent({
-  name: "Web Developer",
-  instructions: "You provide help for web development stuff",
-});
-
-const triageAgent = new Agent({
-  name: "Triage Agent",
+const agent = new Agent({
+  name: "Web App Builder",
   instructions:
-    "You determine which agent to use based on the user's question.",
-  handoffs: [uiuxAgent, webdevAgent],
+    "You build web applications by combining several types of elements to best meet the needs of the user",
+  tools: [add_element_to_app],
 });
 
 // run agents
 async function main() {
-  const result = await run(
-    triageAgent,
-    "Name important web development principles?",
-  );
-  console.log(result.finalOutput);
+  const prompt = "Add the element with id 'Button'";
+  console.log(">> Yout prompt: ", prompt);
+  const result = await run(agent, prompt);
+  console.log(">> Agent response: ", result.finalOutput);
 }
 
 main().catch((err) => console.error(err));
