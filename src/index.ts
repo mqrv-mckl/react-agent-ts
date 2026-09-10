@@ -15,7 +15,8 @@ const agent = new Agent({
 // run agents
 async function main() {
   const prompt = "Add the element with id 'Button'";
-  console.log(">> Yout prompt: ", prompt);
+  // const prompt = "Add a button to the app"; // doesn't work yet => next step
+  console.log("\n>> Your prompt: ", prompt);
   const result = await run(agent, prompt);
   console.log(">> Agent response: ", result.finalOutput);
 }

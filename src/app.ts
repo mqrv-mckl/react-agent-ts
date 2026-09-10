@@ -44,7 +44,7 @@ export class App {
       console.log(`Element added! (id: ${id})`);
       console.log("All elements that are currently inside the app: ");
       App.instance.elements.forEach((element: Element) =>
-        console.log(" - ", element.id),
+        console.log(" -", element.id),
       );
       console.log("--------------------------------------------------");
 
