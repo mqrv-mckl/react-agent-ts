@@ -6,4 +6,4 @@ Currently I'm working on a version that uses the ReAct pattern described in [thi
 
 ---
 
-Hint: Parts of the implementation are inspired by [this](https://github.com/mattambrogi/agent-implementation/).
+Hint: Parts of the implementation are inspired by [this](https://github.com/mattambrogi/agent-implementation/) and [this](https://codesociety.net/patterns/agentic/react-agent/typescript/).

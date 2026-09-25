@@ -1,7 +1,7 @@
-import { Chat } from "./chat.js";
+import { Agent } from "./agent.js";
+import { addElementToApp, getAllElements } from "./tools.js";
 
-const currentChat = new Chat();
-await currentChat.sendMessage(
-  "Write a one-sentence bedtime story about a unicorn.",
-);
-await currentChat.sendMessage("Now use a frog istead of the unicorn.");
+const agent = await Agent.create([addElementToApp, getAllElements], 4);
+
+// TODO: write query for testing
+await agent.query("");
