@@ -1,13 +1,32 @@
-import { tool } from "@openai/agents";
-import { z } from "zod";
 import { App } from "./app.js";
+import { elements } from "./elements.js";
 
-export const add_element_to_app = tool({
-  name: "add_element_to_app",
-  description: "Adds the element with the given id to a web app",
-  parameters: z.object({ id: z.string() }),
-  async execute({ id }) {
-    if (App.getInstance().addElement(id)) return "Element has been added.";
-    else return "Element couldn't be added. See console for more information.";
+export type Tool<TArgs, TResult> = {
+  name: string;
+  description: string;
+  argumentDescription: string;
+  returnDescription: string;
+  execute(args: TArgs): TResult | Promise<TResult>;
+};
+
+export const getAllElements: Tool<{}, string> = {
+  name: "getAllElements",
+  description: "Returns a list of all available elements in JSON format.",
+  argumentDescription: "no arguments",
+  returnDescription:
+    "string – the list of all available elements in JSON format",
+  execute() {
+    return JSON.stringify(elements);
   },
-});
+};
+
+export const addElementToApp: Tool<string, boolean> = {
+  name: "addElementToApp",
+  description:
+    "Adds the element with the given id to a web app. Returns true, if it was successful",
+  argumentDescription: "id: string – id of the element to add",
+  returnDescription: "boolean – true if the element was added successfully",
+  execute(id) {
+    return App.getInstance().addElement(id);
+  },
+};

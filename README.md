@@ -2,6 +2,8 @@
 
 This project is only a preparation for the actual AI agent implementation in the internship project.
 
-The purpose of this is, to try some AI agent SDKs and frameworks and getting used to developing such kind of stuff.
+Currently I'm working on a version that uses the ReAct pattern described in [this paper](https://arxiv.org/pdf/2210.03629).
 
-:)
+---
+
+Hint: Parts of the implementation are inspired by [this](https://github.com/mattambrogi/agent-implementation/) and [this](https://codesociety.net/patterns/agentic/react-agent/typescript/).
