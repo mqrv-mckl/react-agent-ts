@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { zodTextFormat } from "openai/helpers/zod.js";
+import { zodResponseFormat } from "openai/helpers/zod.js";
 import type { ZodObject } from "zod";
 
 type Message = {
@@ -29,15 +29,16 @@ export class Chat {
     this.messages.push({ role: "user", content: prompt });
     this.printLastMessage();
 
-    const response = await this.llm.responses.create({
+    const response = await this.llm.chat.completions.create({
+      messages: this.messages,
       model: "gemma3",
-      input: this.messages,
-      text: {
-        format: zodTextFormat(this.responseSchema, "response"),
-      },
+      response_format: zodResponseFormat(this.responseSchema, "response"),
     });
 
-    this.messages.push({ role: "system", content: response.output_text });
+    this.messages.push({
+      role: "system",
+      content: response.choices[0]?.message.content!,
+    });
     this.printLastMessage();
   }
 
