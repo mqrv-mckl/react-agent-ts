@@ -7,9 +7,13 @@ import { elements } from "./elements.js";
  * an interface 'Tool' along with specific tool implementations.
  */
 
-export type ToolInput = z.ZodType;
+// TODO: error handling (when LLM provides wrong input, parse() leads to an error)
 
-export type Tool<InputSchema extends ToolInput = ToolInput> = {
+export const ToolInputSchema = z.record(z.string(), z.unknown());
+
+export type ToolInput = z.infer<typeof ToolInputSchema>;
+
+export type Tool<InputSchema extends z.ZodObject = z.ZodObject> = {
   name: string;
   description: string;
   inputSchema: InputSchema;
@@ -18,7 +22,7 @@ export type Tool<InputSchema extends ToolInput = ToolInput> = {
 
 export type ToolResult = {
   success: boolean;
-  data: string;
+  data: object;
 };
 
 // getAllElements ----------------------------------------------------------
@@ -33,7 +37,7 @@ export const getAllElements: Tool<typeof GetAllElementsInputSchema> = {
   execute() {
     return {
       success: true,
-      data: JSON.stringify(elements),
+      data: elements,
     };
   },
 };
@@ -49,10 +53,11 @@ export const addElementToApp: Tool<typeof AddElementToAppInputSchema> = {
   description: "Adds the element with the given elementId to the web app.",
   inputSchema: AddElementToAppInputSchema,
   execute(input) {
-    const addedElement: boolean = App.getInstance().addElement(input.elementId);
+    const { elementId } = this.inputSchema.parse(input.elementId);
+    const addedElement: boolean = App.getInstance().addElement(elementId);
     return {
       success: addedElement,
-      data: "",
+      data: {},
     };
   },
 };

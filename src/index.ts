@@ -1,8 +1,6 @@
 import { Agent } from "./agent.js";
 import { addElementToApp, getAllElements } from "./tools.js";
 
-const agent = await Agent.create([addElementToApp, getAllElements], 4);
+const agent = new Agent([addElementToApp, getAllElements], 5);
 
-await agent.query(
-  "I want you to list all the available layout elements for me.",
-);
+agent.query("List all container elements.");
