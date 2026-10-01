@@ -1,32 +1,63 @@
+import z from "zod";
 import { App } from "./app.js";
 import { elements } from "./elements.js";
 
-export type Tool<TArgs, TResult> = {
+/*
+ * Another possible architecture for the tools is, to create
+ * an interface 'Tool' along with specific tool implementations.
+ */
+
+// TODO: error handling (when LLM provides wrong input, parse() leads to an error)
+
+export const ToolInputSchema = z.record(z.string(), z.unknown());
+
+export type ToolInput = z.infer<typeof ToolInputSchema>;
+
+export type Tool<InputSchema extends z.ZodObject = z.ZodObject> = {
   name: string;
   description: string;
-  argumentDescription: string;
-  returnDescription: string;
-  execute(args: TArgs): TResult | Promise<TResult>;
+  inputSchema: InputSchema;
+  execute(input: z.infer<InputSchema>): ToolResult | Promise<ToolResult>;
 };
 
-export const getAllElements: Tool<{}, string> = {
+export type ToolResult = {
+  success: boolean;
+  data: object;
+};
+
+// getAllElements ----------------------------------------------------------
+
+export const GetAllElementsInputSchema = z.object({});
+
+export const getAllElements: Tool<typeof GetAllElementsInputSchema> = {
   name: "getAllElements",
-  description: "Returns a list of all available elements in JSON format.",
-  argumentDescription: "no arguments",
-  returnDescription:
-    "string – the list of all available elements in JSON format",
+  description:
+    "Returns a list of all available elements in JSON format. No input required.",
+  inputSchema: GetAllElementsInputSchema,
   execute() {
-    return JSON.stringify(elements);
+    return {
+      success: true,
+      data: elements,
+    };
   },
 };
 
-export const addElementToApp: Tool<string, boolean> = {
+// addElementToApp ---------------------------------------------------------
+
+export const AddElementToAppInputSchema = z.object({
+  elementId: z.string().describe("The id of the element to add to the web app"),
+});
+
+export const addElementToApp: Tool<typeof AddElementToAppInputSchema> = {
   name: "addElementToApp",
-  description:
-    "Adds the element with the given id to a web app. Returns true, if it was successful",
-  argumentDescription: "id: string – id of the element to add",
-  returnDescription: "boolean – true if the element was added successfully",
-  execute(id) {
-    return App.getInstance().addElement(id);
+  description: "Adds the element with the given elementId to the web app.",
+  inputSchema: AddElementToAppInputSchema,
+  execute(input) {
+    const { elementId } = this.inputSchema.parse(input.elementId);
+    const addedElement: boolean = App.getInstance().addElement(elementId);
+    return {
+      success: addedElement,
+      data: {},
+    };
   },
 };
