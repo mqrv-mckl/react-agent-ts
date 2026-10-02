@@ -41,9 +41,16 @@ export class Agent {
         this.addAndLogMessage({ role: "user", content: prompt });
       }
 
-      const response = await MessageResponseSchema.safeParseAsync(
-        await this.chat.sendMessage(this.messages),
-      );
+      const rawResponse = await this.chat.sendMessage(this.messages);
+
+      let jsonResponse;
+      try {
+        jsonResponse = JSON.parse(rawResponse);
+      } catch {
+        jsonResponse = undefined;
+      }
+
+      const response = await MessageResponseSchema.safeParseAsync(jsonResponse);
       let observation: ToolResult;
 
       if (!response.success) {
@@ -139,14 +146,32 @@ ${JSON.stringify(MessageResponseSchema.toJSONSchema())}
       };
     }
 
-    // TODO: change the folowing parse()-calls to safeParse()
-    // and return helpful ToolResult objects in case of error
+    const actionInput = ToolInputSchema.safeParse(parsedResponse.actionInput);
+    if (!actionInput.success) {
+      return {
+        success: false,
+        data: {
+          errorMessage:
+            "actionInput did not match the ToolInputSchema.\n" +
+            actionInput.error,
+        },
+      };
+    }
+    const parsedActionInput: ToolInput = actionInput.data;
 
-    const toolInput: ToolInput = ToolInputSchema.parse(
-      parsedResponse.actionInput,
-    );
-    const validatedToolInput = tool.inputSchema.parse(toolInput);
-    const observation: ToolResult = await tool.execute(validatedToolInput);
+    const toolInput = tool.inputSchema.safeParse(parsedActionInput);
+    if (!toolInput.success) {
+      return {
+        success: false,
+        data: {
+          errorMessage:
+            "actionInput did not match the parameter input schema of the specified tool.\n" +
+            toolInput.error,
+        },
+      };
+    }
+    const parsedToolInput = toolInput.data;
+    const observation: ToolResult = await tool.execute(parsedToolInput);
     return observation;
   }
 }

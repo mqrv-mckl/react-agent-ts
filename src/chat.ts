@@ -1,10 +1,6 @@
 import OpenAI from "openai";
-import {
-  MessageResponseSchema,
-  type Message,
-  type MessageResponse,
-} from "./agent.js";
 import z from "zod";
+import { MessageResponseSchema, type Message } from "./agent.js";
 
 export class Chat {
   private readonly llm = new OpenAI({
@@ -12,11 +8,11 @@ export class Chat {
     apiKey: "dummy",
   });
 
-  async sendMessage(messages: Message[]): Promise<MessageResponse> {
+  async sendMessage(messages: Message[]): Promise<string> {
     const response = await this.llm.chat.completions.create({
       messages: messages,
       model: "unsloth/Qwen3.8-27B-GGUF:UD-Q2_K_XL",
-      reasoning_effort: "medium",
+      reasoning_effort: "low",
       response_format: {
         type: "json_schema",
         json_schema: {
@@ -26,8 +22,6 @@ export class Chat {
         },
       },
     });
-    return MessageResponseSchema.parse(
-      JSON.parse(response.choices[0]?.message.content!),
-    );
+    return response.choices[0]?.message.content!;
   }
 }
