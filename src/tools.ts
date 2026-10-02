@@ -52,10 +52,7 @@ export const addElementToApp: Tool<typeof AddElementToAppInputSchema> = {
   inputSchema: AddElementToAppInputSchema,
   execute(input) {
     const { elementId } = this.inputSchema.parse(input);
-    const addedElement: boolean = App.getInstance().addElement(elementId);
-    return {
-      success: addedElement,
-      data: {},
-    };
+    const result: ToolResult = App.getInstance().addElement(elementId);
+    return result;
   },
 };

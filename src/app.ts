@@ -1,5 +1,6 @@
 import { elements } from "./elements.js";
 import { ElementCategory, type Element } from "./elements.js";
+import type { ToolResult } from "./tools.js";
 
 export class App {
   private static instance: App;
@@ -32,25 +33,25 @@ export class App {
   /**
    * Adds an element to the app and places it inside of the layout.
    */
-  // TODO: somehow provide precise error messages for the LLM
-  public addElement(id: string): boolean {
+  public addElement(id: string): ToolResult {
     const foundElement: Element | undefined = Object.values(elements).find(
       (element) => element.id === id,
     );
     if (foundElement) {
       this._elements.push(foundElement);
 
-      // logs for demonstration purposes
-      console.log(`Element added! (id: ${id})`);
-      console.log("All elements that are currently inside the app: ");
-      App.instance.elements.forEach((element: Element) =>
-        console.log(" -", element.id),
-      );
-      console.log();
-
-      return true;
+      return {
+        success: true,
+        data: {
+          info: `Element with id '${id}' added! All elements that are currently inside the app: ${App.instance.elements.map((e) => e.id).join(", ")}`,
+        },
+      };
     }
-    console.error(`Error: No element found for id '${id}'!\n`);
-    return false;
+    return {
+      success: false,
+      data: {
+        errorMessage: `No element found for id '${id}'! Make sure to use the id property of the specified element.`,
+      },
+    };
   }
 }
