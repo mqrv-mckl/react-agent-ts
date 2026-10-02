@@ -7,8 +7,6 @@ import {
   ToolInputSchema,
 } from "./tools.js";
 
-// TODO: maybe add example session to system prompt
-
 export type Message = {
   role: "system" | "user" | "assistant";
   content: string;
@@ -34,64 +32,54 @@ export class Agent {
 
   async query(prompt: string): Promise<void> {
     for (let i = 0; i < this.maxTurns; i++) {
-      // adds system and user prompt in the first iteration
+      // add system and user prompt in the first iteration
       if (i === 0) {
-        this.messages.push({
+        this.addAndLogMessage({
           role: "system",
           content: this.getSystemPrompt(),
         });
-        this.logLastMessage();
-
-        this.messages.push({
-          role: "user",
-          content: prompt,
-        });
-        this.logLastMessage();
+        this.addAndLogMessage({ role: "user", content: prompt });
       }
 
-      const response = await this.chat.sendMessage(this.messages);
-      const parsedResponse: MessageResponse =
-        MessageResponseSchema.parse(response);
-
-      // adds the LLMs response to messages
-      this.messages.push({
-        role: "assistant",
-        content: JSON.stringify(parsedResponse),
-      });
-
-      // check if final answer
-      if (parsedResponse.isFinalAnswer) {
-        console.log(
-          "#####################################################################",
-        );
-        console.log("Final Answer:", parsedResponse.thought);
-        console.log(
-          "#####################################################################",
-        );
-        return;
-      }
-
-      this.logLastMessage();
-
-      // tool execution
-      const action = parsedResponse.action;
-      const tool = this.tools.find((t) => t.name === action);
-      if (!tool) {
-        throw new Error(`Tool ${action} not found.`);
-      }
-
-      const toolInput: ToolInput = ToolInputSchema.parse(
-        parsedResponse.actionInput,
+      const response = await MessageResponseSchema.safeParseAsync(
+        await this.chat.sendMessage(this.messages),
       );
-      const validatedToolInput = tool.inputSchema.parse(toolInput);
-      const observation: ToolResult = await tool.execute(validatedToolInput);
+      let observation: ToolResult;
 
-      this.messages.push({
+      if (!response.success) {
+        // if response format was invalid, only add observation
+        observation = {
+          success: false,
+          data: {
+            errorMessage:
+              "Invalid message response format! Details:\n" + response.error,
+          },
+        };
+      } else {
+        // if response format was valid ...
+        const parsedResponse = response.data;
+
+        // add the LLMs response to messages
+        this.addAndLogMessage({
+          role: "assistant",
+          content: JSON.stringify(parsedResponse),
+        });
+
+        // check if final answer
+        if (parsedResponse.isFinalAnswer) {
+          console.log("Final Answer:", parsedResponse.thought);
+          return;
+        }
+
+        // execute action
+        observation = await this.executeAction(parsedResponse);
+      }
+
+      // add observation to messages
+      this.addAndLogMessage({
         role: "user",
         content: JSON.stringify(observation),
       });
-
-      this.logLastMessage();
     }
   }
 
@@ -103,6 +91,8 @@ At the end of the loop you output an Answer.
 Use Thought to describe you throughts about the question you habe been asked.
 Use Action to run one of the actions available to you – then return PAUSE.
 Obervation will be the result of running those actions.
+
+Your final answer must only contain a short summary of what you did. Put this summary into the thought-property of the returned object. Other properties like action and actionInput must stay empty in the final answer.
 
 Your available actions are:
 
@@ -122,10 +112,41 @@ ${JSON.stringify(MessageResponseSchema.toJSONSchema())}
   }
 
   // used for debugging
-  private logLastMessage(): void {
-    console.log("--------------------------------------------------");
+  private logLatestMessage(): void {
     console.log("Added the following to messages[]:");
-    console.log(this.messages[this.messages.length - 1]);
-    console.log("--------------------------------------------------");
+    console.log(this.messages[this.messages.length - 1], "\n");
+  }
+
+  private addAndLogMessage(message: Message): void {
+    this.messages.push({
+      role: message.role,
+      content: message.content,
+    });
+    this.logLatestMessage();
+  }
+
+  private async executeAction(
+    parsedResponse: MessageResponse,
+  ): Promise<ToolResult> {
+    const action = parsedResponse.action;
+    const tool = this.tools.find((t) => t.name === action);
+    if (!tool) {
+      return {
+        success: false,
+        data: {
+          errorMessage: `Tool ${action} not found.`,
+        },
+      };
+    }
+
+    // TODO: change the folowing parse()-calls to safeParse()
+    // and return helpful ToolResult objects in case of error
+
+    const toolInput: ToolInput = ToolInputSchema.parse(
+      parsedResponse.actionInput,
+    );
+    const validatedToolInput = tool.inputSchema.parse(toolInput);
+    const observation: ToolResult = await tool.execute(validatedToolInput);
+    return observation;
   }
 }

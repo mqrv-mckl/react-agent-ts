@@ -7,8 +7,6 @@ import { elements } from "./elements.js";
  * an interface 'Tool' along with specific tool implementations.
  */
 
-// TODO: error handling (when LLM provides wrong input, parse() leads to an error)
-
 export const ToolInputSchema = z.record(z.string(), z.unknown());
 
 export type ToolInput = z.infer<typeof ToolInputSchema>;
@@ -53,7 +51,7 @@ export const addElementToApp: Tool<typeof AddElementToAppInputSchema> = {
   description: "Adds the element with the given elementId to the web app.",
   inputSchema: AddElementToAppInputSchema,
   execute(input) {
-    const { elementId } = this.inputSchema.parse(input.elementId);
+    const { elementId } = this.inputSchema.parse(input);
     const addedElement: boolean = App.getInstance().addElement(elementId);
     return {
       success: addedElement,

@@ -32,6 +32,7 @@ export class App {
   /**
    * Adds an element to the app and places it inside of the layout.
    */
+  // TODO: somehow provide precise error messages for the LLM
   public addElement(id: string): boolean {
     const foundElement: Element | undefined = Object.values(elements).find(
       (element) => element.id === id,
@@ -40,17 +41,16 @@ export class App {
       this._elements.push(foundElement);
 
       // logs for demonstration purposes
-      console.log("--------------------------------------------------");
       console.log(`Element added! (id: ${id})`);
       console.log("All elements that are currently inside the app: ");
       App.instance.elements.forEach((element: Element) =>
         console.log(" -", element.id),
       );
-      console.log("--------------------------------------------------");
+      console.log();
 
       return true;
     }
-    console.error(`Error: No element found for id '${id}'!`);
+    console.error(`Error: No element found for id '${id}'!\n`);
     return false;
   }
 }
