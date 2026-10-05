@@ -1,6 +1,6 @@
 import z from "zod";
-import { App } from "./app.js";
-import { elements } from "./elements.js";
+import { App } from "../environment/app.js";
+import { elements } from "../environment/elements.js";
 
 /*
  * Another possible architecture for the tools is, to create

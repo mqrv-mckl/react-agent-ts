@@ -1,6 +1,6 @@
 import { elements } from "./elements.js";
 import { ElementCategory, type Element } from "./elements.js";
-import type { ToolResult } from "./tools.js";
+import type { ToolResult } from "../agent/tools.js";
 
 export class App {
   private static instance: App;

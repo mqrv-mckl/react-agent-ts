@@ -1,5 +1,5 @@
-import { Agent } from "./agent.js";
-import { addElementToApp, getAllElements } from "./tools.js";
+import { Agent } from "./agent/agent.js";
+import { addElementToApp, getAllElements } from "./agent/tools.js";
 
 const agent = new Agent([addElementToApp, getAllElements], 10);
 
