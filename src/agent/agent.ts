@@ -1,25 +1,13 @@
-import z from "zod";
 import { Chat } from "./chat.js";
 import {
+  MessageResponseSchema,
+  ToolInputSchema,
+  type Message,
+  type MessageResponse,
   type Tool,
   type ToolInput,
   type ToolResult,
-  ToolInputSchema,
-} from "./tools.js";
-
-export type Message = {
-  role: "system" | "user" | "assistant";
-  content: string;
-};
-
-export const MessageResponseSchema = z.object({
-  thought: z.string(),
-  action: z.string(),
-  actionInput: ToolInputSchema,
-  isFinalAnswer: z.boolean(),
-});
-
-export type MessageResponse = z.infer<typeof MessageResponseSchema>;
+} from "./types.js";
 
 export class Agent {
   private readonly messages: Message[] = [];
@@ -108,6 +96,7 @@ export class Agent {
 
   private getSystemPrompt(): string {
     // system prompt is inspired by https://github.com/mattambrogi/agent-implementation/
+    // TODO: optimize system prompt
     return `
 You run in a loop of Thought, Action, PAUSE, Observation.
 At the end of the loop you output an Answer.

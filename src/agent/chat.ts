@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import z from "zod";
-import { MessageResponseSchema, type Message } from "./agent.js";
+import { MessageResponseSchema, type Message } from "./types.js";
 
 export class Chat {
   private readonly llm = new OpenAI({

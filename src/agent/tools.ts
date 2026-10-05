@@ -1,27 +1,7 @@
 import z from "zod";
 import { App } from "../environment/app.js";
 import { elements } from "../environment/elements.js";
-
-/*
- * Another possible architecture for the tools is, to create
- * an interface 'Tool' along with specific tool implementations.
- */
-
-export const ToolInputSchema = z.record(z.string(), z.unknown());
-
-export type ToolInput = z.infer<typeof ToolInputSchema>;
-
-export type Tool<InputSchema extends z.ZodObject = z.ZodObject> = {
-  name: string;
-  description: string;
-  inputSchema: InputSchema;
-  execute(input: z.infer<InputSchema>): ToolResult | Promise<ToolResult>;
-};
-
-export type ToolResult = {
-  success: boolean;
-  data: object;
-};
+import type { Tool, ToolResult } from "./types.js";
 
 // getAllElements ----------------------------------------------------------
 
