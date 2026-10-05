@@ -4,14 +4,14 @@ A minimal demonstration of a [ReAct](https://doi.org/10.48550/arXiv.2210.03629) 
 
 ## Overview
 
-The agent follows the ReAct approach: it alternated between reasoning about the task and calling tools, and it uses the results of those calls to decide on its next step.
+The agent follows the ReAct approach: it alternates between reasoning about the task and calling tools, and it uses the results of those calls to decide on its next step.
 
 The environment it acts in is a deliberately very minimal simulation of a web app builder. It provides only the bare minimum needed to illustrate how tool calls work, so it is not meant to be a realistic or complete builder.
 
 Parts of the implementation are inspired by:
 
 - [mattmbrogi/agent-implementation](https://github.com/mattmbrogi/agent-implementation/)
-- [ReAct Agent pattern (TypeScript)](https://codesociety.net/patterns/agentic/react-agent/typescript/)
+- [ReAct Agent Pattern (TypeScript)](https://codesociety.net/patterns/agentic/react-agent/typescript/)
 
 ## Structure
 
