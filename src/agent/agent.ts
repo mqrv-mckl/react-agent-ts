@@ -54,7 +54,8 @@ export class Agent {
       let observation: ToolResult;
 
       if (!response.success) {
-        // if response format was invalid, only add observation
+        // if response format was invalid, add rawResponse and observation
+        this.addAndLogMessage({ role: "assistant", content: rawResponse });
         observation = {
           success: false,
           data: {
@@ -79,7 +80,18 @@ export class Agent {
         }
 
         // execute action
-        observation = await this.executeAction(parsedResponse);
+        try {
+          observation = await this.executeAction(parsedResponse);
+        } catch (e) {
+          observation = {
+            success: false,
+            data: {
+              errorMessage:
+                "An exception ocurred while running the tool" +
+                (e instanceof Error ? ": " + e.message : "."),
+            },
+          };
+        }
       }
 
       // add observation to messages
@@ -87,6 +99,10 @@ export class Agent {
         role: "user",
         content: JSON.stringify(observation),
       });
+
+      if (i === this.maxTurns - 1) {
+        console.warn("Turn limit reached. Stopped without a final answer.");
+      }
     }
   }
 
@@ -95,27 +111,31 @@ export class Agent {
     return `
 You run in a loop of Thought, Action, PAUSE, Observation.
 At the end of the loop you output an Answer.
-Use Thought to describe you throughts about the question you habe been asked.
-Use Action to run one of the actions available to you – then return PAUSE.
-Obervation will be the result of running those actions.
+Use Thought to describe you thoughts about the question you have been asked.
+Use Action to run one of the actions available to you.
+After that you'll get the Observation, which will be the result of running those actions.
 
 Your final answer must only contain a short summary of what you did. Put this summary into the thought-property of the returned object. Other properties like action and actionInput must stay empty in the final answer.
 
 Your available actions are:
 
-${this.getToolString(this.tools)}
+${this.getToolString()}
 
 Only reply in the format shown by the JSON schema below! Just RAW JSON, no backticks (so not formatted as a codeblock), no linebreaks around it and nothing else! Just a raw string in JSON format.
 ${JSON.stringify(MessageResponseSchema.toJSONSchema())}
 `;
   }
 
-  private getToolString(tools: Tool[]): string {
-    const toolsArray: string[] = [];
-    for (const tool of tools) {
-      toolsArray.push(JSON.stringify(tool));
-    }
-    return toolsArray.join("");
+  private getToolString(): string {
+    return this.tools
+      .map((t) =>
+        JSON.stringify({
+          name: t.name,
+          description: t.description,
+          inputSchema: t.inputSchema.toJSONSchema(),
+        }),
+      )
+      .join("\n");
   }
 
   // used for debugging
