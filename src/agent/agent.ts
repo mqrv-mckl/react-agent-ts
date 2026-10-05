@@ -155,18 +155,10 @@ ${JSON.stringify(MessageResponseSchema.toJSONSchema())}
       };
     }
 
-    const actionInput = ToolInputSchema.safeParse(parsedResponse.actionInput);
-    if (!actionInput.success) {
-      return {
-        success: false,
-        data: {
-          errorMessage:
-            "actionInput did not match the ToolInputSchema.\n" +
-            actionInput.error,
-        },
-      };
-    }
-    const parsedActionInput: ToolInput = actionInput.data;
+    // the following doesn't use safeParse, because it's been validated already using MessageResponseSchema
+    const parsedActionInput: ToolInput = ToolInputSchema.parse(
+      parsedResponse.actionInput,
+    );
 
     const toolInput = tool.inputSchema.safeParse(parsedActionInput);
     if (!toolInput.success) {
