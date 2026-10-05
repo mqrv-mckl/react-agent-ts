@@ -10,7 +10,7 @@ export const GetAllElementsInputSchema = z.object({});
 export const getAllElements: Tool<typeof GetAllElementsInputSchema> = {
   name: "getAllElements",
   description:
-    "Returns a list of all available elements in JSON format. No input required.",
+    "Returns a list of all available elements including their IDs in JSON format. No input required.",
   inputSchema: GetAllElementsInputSchema,
   execute() {
     return {
@@ -31,7 +31,7 @@ export const addElementToApp: Tool<typeof AddElementToAppInputSchema> = {
   description: "Adds the element with the given elementId to the web app.",
   inputSchema: AddElementToAppInputSchema,
   execute(input) {
-    const { elementId } = this.inputSchema.parse(input);
+    const { elementId } = input;
     const result: ToolResult = App.getInstance().addElement(elementId);
     return result;
   },

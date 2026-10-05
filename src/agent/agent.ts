@@ -11,24 +11,22 @@ import {
 
 export class Agent {
   private readonly messages: Message[] = [];
-  private readonly chat: Chat = new Chat();
 
   constructor(
+    private readonly chat: Chat,
     private readonly tools: Tool[],
     private readonly maxTurns: number,
-  ) {}
+  ) {
+    this.addAndLogMessage({
+      role: "system",
+      content: this.getSystemPrompt(),
+    });
+  }
 
   async query(prompt: string): Promise<void> {
-    for (let i = 0; i < this.maxTurns; i++) {
-      // add system and user prompt in the first iteration
-      if (i === 0) {
-        this.addAndLogMessage({
-          role: "system",
-          content: this.getSystemPrompt(),
-        });
-        this.addAndLogMessage({ role: "user", content: prompt });
-      }
+    this.addAndLogMessage({ role: "user", content: prompt });
 
+    for (let i = 0; i < this.maxTurns; i++) {
       const rawResponse = await this.chat.sendMessage(this.messages);
 
       let jsonResponse;
@@ -63,7 +61,7 @@ export class Agent {
 
         // check if final answer
         if (parsedResponse.isFinalAnswer) {
-          console.log("Final Answer:", parsedResponse.thought);
+          console.log("Final Answer:", parsedResponse.thought, "\n");
           return;
         }
 

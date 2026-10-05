@@ -3,10 +3,15 @@ import z from "zod";
 import { MessageResponseSchema, type Message } from "./types.js";
 
 export class Chat {
-  private readonly llm = new OpenAI({
-    baseURL: "http://localhost:8080/v1",
-    apiKey: "dummy",
-  });
+  constructor(
+    baseURL: string,
+    apiKey: string,
+
+    private readonly llm = new OpenAI({
+      baseURL: baseURL,
+      apiKey: apiKey,
+    }),
+  ) {}
 
   async sendMessage(messages: Message[]): Promise<string> {
     const response = await this.llm.chat.completions.create({
