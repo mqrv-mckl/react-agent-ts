@@ -21,3 +21,15 @@ Parts of the implementation are inspired by:
 ## Model
 
 The project was developed and tested with [llama.cpp](https://github.com/ggml-org/llama.cpp) and a quantized Qwen3.8 model: [unsloth/Qwen3.8-27B-GGUF](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF).
+
+## ReAct Loop
+
+```mermaid
+flowchart
+    IN[User Input / Prompt] -->|add to| MH[Message History] -->|send to| LLM -->|returns| Res[Response] --> V[Validation using MessageResponseSchema]
+    V -->|correct format| CheckFinal[Check if final answer] -->|yes| Stop
+    CheckFinal -->|no| Exec[ExecuteTool] -->|returns| ToolResult[ToolResult including information about success and other]
+    V -->|incorrect format| ToolResult
+    ToolResult --> LastAnsw[Check if turn limit reached] -->|yes| Stop
+    LastAnsw -->|no: add ToolResult to...| MH
+```
