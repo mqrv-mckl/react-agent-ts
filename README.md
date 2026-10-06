@@ -10,7 +10,7 @@ The environment it acts in is a deliberately very minimal simulation of a web ap
 
 Parts of the implementation are inspired by:
 
-- [mattmbrogi/agent-implementation](https://github.com/mattmbrogi/agent-implementation/)
+- [mattambrogi/agent-implementation](https://github.com/mattambrogi/agent-implementation)
 - [ReAct Agent Pattern (TypeScript)](https://codesociety.net/patterns/agentic/react-agent/typescript/)
 
 ## Structure
