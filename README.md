@@ -1,9 +1,35 @@
-# README
+# ReAct Agent (TS)
 
-This project is only a preparation for the actual AI agent implementation in the internship project.
+A minimal demonstration of a [ReAct](https://doi.org/10.48550/arXiv.2210.03629) agent that uses tool calls to act in a simulated environment.
 
-Currently I'm working on a version that uses the ReAct pattern described in [this paper](https://arxiv.org/pdf/2210.03629).
+## Overview
 
----
+The agent follows the ReAct approach: it alternates between reasoning about the task and calling tools, and it uses the results of those calls to decide on its next step.
 
-Hint: Parts of the implementation are inspired by [this](https://github.com/mattambrogi/agent-implementation/) and [this](https://codesociety.net/patterns/agentic/react-agent/typescript/).
+The environment it acts in is a deliberately very minimal simulation of a web app builder. It provides only the bare minimum needed to illustrate how tool calls work, so it is not meant to be a realistic or complete builder.
+
+Parts of the implementation are inspired by:
+
+- [mattmbrogi/agent-implementation](https://github.com/mattmbrogi/agent-implementation/)
+- [ReAct Agent Pattern (TypeScript)](https://codesociety.net/patterns/agentic/react-agent/typescript/)
+
+## Structure
+
+- `src/agent`: agent logic (ReAct loop, tool call handling)
+- `src/environment`: files that simulate the web app builder environment and the tools the agent can call
+
+## Model
+
+The project was developed and tested with [llama.cpp](https://github.com/ggml-org/llama.cpp) and a quantized Qwen3.8 model: [unsloth/Qwen3.8-27B-GGUF](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF).
+
+## ReAct Loop
+
+```mermaid
+flowchart
+    IN[User Input / Prompt] -->|add to| MH[Message History] -->|send to| LLM -->|returns| Res[Response] --> V[Validation using MessageResponseSchema]
+    V -->|correct format| CheckFinal[Check if final answer] -->|yes| Stop
+    CheckFinal -->|no| Exec[ExecuteTool] -->|returns| ToolResult[ToolResult including information about success and other]
+    V -->|incorrect format| ToolResult
+    ToolResult --> LastAnsw[Check if turn limit reached] -->|yes| Stop
+    LastAnsw -->|no: add ToolResult to...| MH
+```
