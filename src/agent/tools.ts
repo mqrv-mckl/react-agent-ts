@@ -3,10 +3,16 @@ import { App } from "../environment/app.js";
 import { elements } from "../environment/elements.js";
 import type { Tool, ToolResult } from "./types.js";
 
-// getAllElements ----------------------------------------------------------
-
+/**
+ * Input schema of the getAllElements tool.
+ * @constant
+ */
 export const GetAllElementsInputSchema = z.object({});
 
+/**
+ * Tool that lets the agent retrieve all elements that can be added to the web app.
+ * @constant
+ */
 export const getAllElements: Tool<typeof GetAllElementsInputSchema> = {
   name: "getAllElements",
   description:
@@ -20,12 +26,18 @@ export const getAllElements: Tool<typeof GetAllElementsInputSchema> = {
   },
 };
 
-// addElementToApp ---------------------------------------------------------
-
+/**
+ * Input schema of the addElementToApp tool.
+ * @constant
+ */
 export const AddElementToAppInputSchema = z.object({
-  elementId: z.string().describe("The id of the element to add to the web app"),
+  elementId: z.string().describe("The ID of the element to add to the web app"),
 });
 
+/**
+ * Tool that lets the agent add an element to the web app.
+ * @constant
+ */
 export const addElementToApp: Tool<typeof AddElementToAppInputSchema> = {
   name: "addElementToApp",
   description: "Adds the element with the given elementId to the web app.",
