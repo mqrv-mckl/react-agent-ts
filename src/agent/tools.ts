@@ -1,7 +1,7 @@
 import z from "zod";
 import { App } from "../environment/app.js";
 import { elements } from "../environment/elements.js";
-import type { Tool, ToolResult } from "./types.js";
+import type { Tool } from "./types.js";
 
 /**
  * Input schema of the getAllElements tool.
@@ -44,7 +44,7 @@ export const addElementToApp: Tool<typeof AddElementToAppInputSchema> = {
   inputSchema: AddElementToAppInputSchema,
   execute(input) {
     const { elementId } = input;
-    const result: ToolResult = App.getInstance().addElement(elementId);
+    const result: object = { success: App.getInstance().addElement(elementId) };
     return result;
   },
 };

@@ -8,12 +8,7 @@ export type Tool<InputSchema extends z.ZodObject = z.ZodObject> = {
   name: string;
   description: string;
   inputSchema: InputSchema;
-  execute(input: z.infer<InputSchema>): ToolResult | Promise<ToolResult>;
-};
-
-export type ToolResult = {
-  success: boolean;
-  data: object;
+  execute(input: z.infer<InputSchema>): object | Promise<object>;
 };
 
 export type Message = {

@@ -28,8 +28,8 @@ The project was developed and tested with [llama.cpp](https://github.com/ggml-or
 flowchart
     IN[User Input / Prompt] -->|add to| MH[Message History] -->|send to| LLM -->|returns| Res[Response] --> V[Validation using MessageResponseSchema]
     V -->|correct format| CheckFinal[Check if final answer] -->|yes| Stop
-    CheckFinal -->|no| Exec[ExecuteTool] -->|returns| ToolResult[ToolResult including information about success and other]
-    V -->|incorrect format| ToolResult
-    ToolResult --> LastAnsw[Check if turn limit reached] -->|yes| Stop
-    LastAnsw -->|no: add ToolResult to...| MH
+    CheckFinal -->|no| Exec[ExecuteTool] -->|returns| Result[Object including information about success and other]
+    V -->|incorrect format| Result
+    Result --> LastAnsw[Check if turn limit reached] -->|yes| Stop
+    LastAnsw -->|no: add result object to...| MH
 ```

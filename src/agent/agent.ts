@@ -7,7 +7,6 @@ import {
   type MessageResponse,
   type Tool,
   type ToolInput,
-  type ToolResult,
 } from "./types.js";
 
 /**
@@ -66,7 +65,7 @@ export class Agent {
       }
 
       const response = await MessageResponseSchema.safeParseAsync(jsonResponse);
-      let observation: ToolResult;
+      let observation: object;
 
       if (!response.success) {
         // if response format was invalid, add rawResponse and observation
@@ -193,11 +192,11 @@ ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
    * @method
    * @async
    * @param {MessageResponse} parsedResponse - The parsed MessageResponse object that contains the tool to be executed.
-   * @returns {Promise<ToolResult>} A promise that resolves with the ToolResult of the execution.
+   * @returns {Promise<object>} A promise that resolves with an object that represents the result of the execution.
    */
   private async executeAction(
     parsedResponse: MessageResponse,
-  ): Promise<ToolResult> {
+  ): Promise<object> {
     const action = parsedResponse.action;
     const tool = this.tools.find((t) => t.name === action);
     if (!tool) {
@@ -226,7 +225,7 @@ ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
       };
     }
     const parsedToolInput = toolInput.data;
-    const observation: ToolResult = await tool.execute(parsedToolInput);
+    const observation: object = await tool.execute(parsedToolInput);
     return observation;
   }
 }
