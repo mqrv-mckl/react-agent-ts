@@ -2,6 +2,8 @@ import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import z from "zod";
 import { elements } from "../environment/elements.js";
 import { App } from "../environment/app.js";
+import { createMcpHonoApp } from "@modelcontextprotocol/hono";
+import type { Context } from "hono";
 
 const handler = createMcpHandler(() => {
   const server = new McpServer({
@@ -48,3 +50,10 @@ const handler = createMcpHandler(() => {
 
   return server;
 });
+
+const app = createMcpHonoApp();
+app.all("/mcp", (c: Context) =>
+  handler.fetch(c.req.raw, { parsedBody: c.get("parsedBody") }),
+);
+
+export default app;

@@ -8,6 +8,7 @@ import {
   type Tool,
   type ToolInput,
 } from "./types.js";
+import type { Client } from "@modelcontextprotocol/client";
 
 /**
  * Represents a ReAct agent.
@@ -23,6 +24,7 @@ export class Agent {
   /**
    * Creates a new Agent instance.
    * @constructor
+   * @param {Client} mcpClient - The MCP client instance used for tools.
    * @param {Chat} chat - The Chat instance used by the agent.
    * @param {Tool[]} tools - The tools that the agent can execute.
    * @param {number} maxTurns - The maximum number of turns per query before the agent stops.
@@ -34,6 +36,7 @@ export class Agent {
    * );
    */
   constructor(
+    private readonly mcpClient: Client,
     private readonly chat: Chat,
     private readonly tools: Tool[],
     private readonly maxTurns: number,
