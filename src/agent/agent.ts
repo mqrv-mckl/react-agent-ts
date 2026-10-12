@@ -7,6 +7,7 @@ import {
   type MessageResponse,
   type Observation,
 } from "./types.js";
+import type { ChatHistory } from "./chatHistory.js";
 
 /**
  * Represents a ReAct agent.
@@ -14,16 +15,11 @@ import {
  */
 export class Agent {
   /**
-   * The message history of the agent, including the system prompt as well as messages by the user and the LLM's responses.
-   * @property {Message[]}
-   */
-  private readonly messages: Message[] = [];
-
-  /**
    * Creates a new Agent instance.
    * @constructor
    * @param {Client} mcpClient - The MCP client instance used for tools.
    * @param {Chat} chat - The Chat instance used by the agent.
+   * @param {ChatHistory} chatHistory - The ChatHistory instance used by the agent.
    * @param {number} maxTurns - The maximum number of turns per query before the agent stops.
    * @example
    * const agent = new Agent(
@@ -39,6 +35,7 @@ export class Agent {
   constructor(
     private readonly mcpClient: Client,
     private readonly chat: Chat,
+    private readonly chatHistory: ChatHistory,
     private readonly maxTurns: number,
   ) {}
 
@@ -46,7 +43,7 @@ export class Agent {
    * Initializes the Agent. Must be called before using query!
    */
   async initialize() {
-    this.addAndLogMessage({
+    this.chatHistory.addAndLogMessage({
       role: "system",
       content: await this.getSystemPrompt(),
     });
@@ -61,10 +58,10 @@ export class Agent {
    * @returns {Promise<void>}
    */
   async query(prompt: string): Promise<void> {
-    this.addAndLogMessage({ role: "user", content: prompt });
+    this.chatHistory.addAndLogMessage({ role: "user", content: prompt });
 
     for (let i = 0; i < this.maxTurns; i++) {
-      const rawResponse = await this.chat.sendMessage(this.messages);
+      const rawResponse = await this.chat.sendMessage(this.chatHistory.get());
 
       let jsonResponse;
       try {
@@ -78,7 +75,10 @@ export class Agent {
 
       if (!response.success) {
         // if response format was invalid, add rawResponse and observation
-        this.addAndLogMessage({ role: "assistant", content: rawResponse });
+        this.chatHistory.addAndLogMessage({
+          role: "assistant",
+          content: rawResponse,
+        });
         observation = {
           success: false,
           data: {
@@ -91,7 +91,7 @@ export class Agent {
         const parsedResponse = response.data;
 
         // add the LLM's response to messages
-        this.addAndLogMessage({
+        this.chatHistory.addAndLogMessage({
           role: "assistant",
           content: JSON.stringify(parsedResponse),
         });
@@ -118,7 +118,7 @@ export class Agent {
       }
 
       // add observation to messages
-      this.addAndLogMessage({
+      this.chatHistory.addAndLogMessage({
         role: "user",
         content: JSON.stringify(observation),
       });
@@ -174,28 +174,6 @@ ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
         }),
       )
       .join("\n");
-  }
-
-  /**
-   * Logs the latest entry of the message history to the console.
-   * @method
-   */
-  private logLatestMessage(): void {
-    console.log("Added the following to messages[]:");
-    console.log(this.messages[this.messages.length - 1], "\n");
-  }
-
-  /**
-   * Adds a new message to the message history and logs it to the console.
-   * @method
-   * @param {Message} message - The message to be added to the history and logged.
-   */
-  private addAndLogMessage(message: Message): void {
-    this.messages.push({
-      role: message.role,
-      content: message.content,
-    });
-    this.logLatestMessage();
   }
 
   /**

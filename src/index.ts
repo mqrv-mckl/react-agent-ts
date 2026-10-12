@@ -4,6 +4,7 @@ import { Chat } from "./agent/chat.js";
 import app from "./mcp/server.js";
 import { createAndConnectClient } from "./mcp/client.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { ChatHistory } from "./agent/chatHistory.js";
 
 const server = serve(app);
 
@@ -17,6 +18,7 @@ const mcpClient = await createAndConnectClient(transport);
 const agent = new Agent(
   mcpClient,
   new Chat("http://localhost:8080/v1", "dummy"),
+  new ChatHistory(0, false), // TODO: change arguments after implementing (auto) summary
   10,
 );
 
