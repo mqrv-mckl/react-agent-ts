@@ -5,6 +5,7 @@ import {
   MessageResponseSchema,
   type Message,
   type MessageResponse,
+  type Observation,
 } from "./types.js";
 
 /**
@@ -70,7 +71,7 @@ export class Agent {
       }
 
       const response = await MessageResponseSchema.safeParseAsync(jsonResponse);
-      let observation: object;
+      let observation: Observation;
 
       if (!response.success) {
         // if response format was invalid, add rawResponse and observation
@@ -202,15 +203,15 @@ ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
    */
   private async executeAction(
     parsedResponse: MessageResponse,
-  ): Promise<object> {
-    // TODO: error handling
-
+  ): Promise<Observation> {
     const result = await this.mcpClient.callTool({
       name: parsedResponse.action,
       arguments: parsedResponse.actionInput,
     });
 
-    const observation: object = result;
-    return observation;
+    return {
+      success: !result.isError,
+      data: result.content,
+    };
   }
 }

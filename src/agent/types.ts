@@ -13,3 +13,8 @@ export const MessageResponseSchema = z.object({
 });
 
 export type MessageResponse = z.infer<typeof MessageResponseSchema>;
+
+export type Observation = {
+  success: boolean;
+  data: object;
+};
