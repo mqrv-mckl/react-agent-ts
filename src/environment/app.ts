@@ -1,4 +1,3 @@
-import type { ToolResult } from "../agent/types.js";
 import { ElementCategory, elements, type Element } from "./elements.js";
 
 /**
@@ -62,25 +61,15 @@ export class App {
   /**
    * Adds an element to the app and places it inside of the layout.
    */
-  public addElement(id: string): ToolResult {
+  public addElement(id: string): boolean {
     const foundElement: Element | undefined = Object.values(elements).find(
       (element) => element.id === id,
     );
     if (foundElement) {
       this._elements.push(foundElement);
 
-      return {
-        success: true,
-        data: {
-          info: `Element with id '${id}' added! All elements that are currently inside the app: ${App.instance.elements.map((e) => e.id).join(", ")}`,
-        },
-      };
+      return true;
     }
-    return {
-      success: false,
-      data: {
-        errorMessage: `No element found for id '${id}'! Make sure to use the id property of the specified element.`,
-      },
-    };
+    return false;
   }
 }

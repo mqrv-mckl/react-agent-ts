@@ -1,13 +1,11 @@
+import type { Client } from "@modelcontextprotocol/client";
 import z from "zod";
 import { Chat } from "./chat.js";
 import {
   MessageResponseSchema,
-  ToolInputSchema,
   type Message,
   type MessageResponse,
-  type Tool,
-  type ToolInput,
-  type ToolResult,
+  type Observation,
 } from "./types.js";
 
 /**
@@ -24,25 +22,35 @@ export class Agent {
   /**
    * Creates a new Agent instance.
    * @constructor
+   * @param {Client} mcpClient - The MCP client instance used for tools.
    * @param {Chat} chat - The Chat instance used by the agent.
-   * @param {Tool[]} tools - The tools that the agent can execute.
    * @param {number} maxTurns - The maximum number of turns per query before the agent stops.
    * @example
    * const agent = new Agent(
+   *   await createAndConnectClient(
+   *     new StreamableHTTPClientTransport(
+   *       new URL("http://localhost:3000/mcp"),
+   * .   )
+   *   ),
    *   new Chat("http://localhost:8080/v1", "dummy"),
-   *   [addElementToApp, getAllElements],
    *   10,
    * );
    */
   constructor(
+    private readonly mcpClient: Client,
     private readonly chat: Chat,
-    private readonly tools: Tool[],
     private readonly maxTurns: number,
-  ) {
+  ) {}
+
+  /**
+   * Initializes the Agent. Must be called before using query!
+   */
+  async initialize() {
     this.addAndLogMessage({
       role: "system",
-      content: this.getSystemPrompt(),
+      content: await this.getSystemPrompt(),
     });
+    console.log("Successfully initialized the agent");
   }
 
   /**
@@ -66,7 +74,7 @@ export class Agent {
       }
 
       const response = await MessageResponseSchema.safeParseAsync(jsonResponse);
-      let observation: ToolResult;
+      let observation: Observation;
 
       if (!response.success) {
         // if response format was invalid, add rawResponse and observation
@@ -125,9 +133,10 @@ export class Agent {
   /**
    * Assembles and returns the system prompt.
    * @method
-   * @returns {string} The complete system prompt.
+   * @async
+   * @returns {Promise<string>} A promise that resolves with the complete system prompt.
    */
-  private getSystemPrompt(): string {
+  private async getSystemPrompt(): Promise<string> {
     // system prompt is inspired by https://github.com/mattambrogi/agent-implementation/
     // TODO: optimize system prompt
     return `
@@ -141,7 +150,7 @@ Your final answer must only contain a short summary of what you did. Put this su
 
 Your available actions are:
 
-${this.getToolString()}
+${await this.getToolString()}
 
 Only reply in the format shown by the JSON schema below! Just RAW JSON, no backticks (so not formatted as a codeblock), no linebreaks around it and nothing else! Just a raw string in JSON format.
 ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
@@ -151,15 +160,17 @@ ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
   /**
    * Builds and returns a string that lists all of the agent's tools in JSON format.
    * @method
-   * @returns {string} The list of the agent's tools in JSON format.
+   * @async
+   * @returns {Promise<string>} A Promise that resolves with the list of the agent's tools in JSON format.
    */
-  private getToolString(): string {
-    return this.tools
+  private async getToolString(): Promise<string> {
+    const { tools } = await this.mcpClient.listTools();
+    return tools
       .map((t) =>
         JSON.stringify({
           name: t.name,
           description: t.description,
-          inputSchema: z.toJSONSchema(t.inputSchema),
+          inputSchema: t.inputSchema,
         }),
       )
       .join("\n");
@@ -193,40 +204,19 @@ ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
    * @method
    * @async
    * @param {MessageResponse} parsedResponse - The parsed MessageResponse object that contains the tool to be executed.
-   * @returns {Promise<ToolResult>} A promise that resolves with the ToolResult of the execution.
+   * @returns {Promise<Observation>} A promise that resolves with an observation that contains informations about tool execution and potential errors.
    */
   private async executeAction(
     parsedResponse: MessageResponse,
-  ): Promise<ToolResult> {
-    const action = parsedResponse.action;
-    const tool = this.tools.find((t) => t.name === action);
-    if (!tool) {
-      return {
-        success: false,
-        data: {
-          errorMessage: `Tool ${action} not found.`,
-        },
-      };
-    }
+  ): Promise<Observation> {
+    const result = await this.mcpClient.callTool({
+      name: parsedResponse.action,
+      arguments: parsedResponse.actionInput,
+    });
 
-    // the following doesn't use safeParse, because it has already been validated using MessageResponseSchema
-    const parsedActionInput: ToolInput = ToolInputSchema.parse(
-      parsedResponse.actionInput,
-    );
-
-    const toolInput = tool.inputSchema.safeParse(parsedActionInput);
-    if (!toolInput.success) {
-      return {
-        success: false,
-        data: {
-          errorMessage:
-            "actionInput did not match the parameter input schema of the specified tool.\n" +
-            toolInput.error,
-        },
-      };
-    }
-    const parsedToolInput = toolInput.data;
-    const observation: ToolResult = await tool.execute(parsedToolInput);
-    return observation;
+    return {
+      success: !result.isError,
+      data: result.content,
+    };
   }
 }
