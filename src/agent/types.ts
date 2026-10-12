@@ -1,11 +1,5 @@
 import z from "zod";
 
-export type Tool = {
-  name: string;
-  description: string;
-  inputSchema: object;
-};
-
 export type Message = {
   role: "system" | "user" | "assistant";
   content: string;

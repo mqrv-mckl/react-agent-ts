@@ -5,7 +5,6 @@ import {
   MessageResponseSchema,
   type Message,
   type MessageResponse,
-  type Tool,
 } from "./types.js";
 
 /**
@@ -18,7 +17,6 @@ export class Agent {
    * @property {Message[]}
    */
   private readonly messages: Message[] = [];
-  private readonly tools: Tool[] = [];
 
   /**
    * Creates a new Agent instance.
@@ -44,17 +42,9 @@ export class Agent {
   ) {}
 
   async initialize() {
-    const { tools } = await this.mcpClient.listTools();
-    for (const tool of tools) {
-      this.tools.push({
-        name: tool.name,
-        description: tool.description ? tool.description : "none",
-        inputSchema: tool.inputSchema,
-      });
-    }
     this.addAndLogMessage({
       role: "system",
-      content: this.getSystemPrompt(),
+      content: await this.getSystemPrompt(),
     });
     console.log("Successfully initialized the agent");
   }
@@ -139,9 +129,9 @@ export class Agent {
   /**
    * Assembles and returns the system prompt.
    * @method
-   * @returns {string} The complete system prompt.
+   * @returns {Promise<string>} A promise that resolves with the complete system prompt.
    */
-  private getSystemPrompt(): string {
+  private async getSystemPrompt(): Promise<string> {
     // system prompt is inspired by https://github.com/mattambrogi/agent-implementation/
     // TODO: optimize system prompt
     return `
@@ -155,7 +145,7 @@ Your final answer must only contain a short summary of what you did. Put this su
 
 Your available actions are:
 
-${this.getToolString()}
+${await this.getToolString()}
 
 Only reply in the format shown by the JSON schema below! Just RAW JSON, no backticks (so not formatted as a codeblock), no linebreaks around it and nothing else! Just a raw string in JSON format.
 ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
@@ -165,10 +155,11 @@ ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
   /**
    * Builds and returns a string that lists all of the agent's tools in JSON format.
    * @method
-   * @returns {string} The list of the agent's tools in JSON format.
+   * @returns {Promise<string>} A Promise that resolves with the list of the agent's tools in JSON format.
    */
-  private getToolString(): string {
-    return this.tools
+  private async getToolString(): Promise<string> {
+    const { tools } = await this.mcpClient.listTools();
+    return tools
       .map((t) =>
         JSON.stringify({
           name: t.name,
