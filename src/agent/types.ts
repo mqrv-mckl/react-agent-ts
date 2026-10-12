@@ -1,14 +1,9 @@
 import z from "zod";
 
-export const ToolInputSchema = z.record(z.string(), z.unknown());
-
-export type ToolInput = z.infer<typeof ToolInputSchema>;
-
-export type Tool<InputSchema extends z.ZodObject = z.ZodObject> = {
+export type Tool = {
   name: string;
   description: string;
-  inputSchema: InputSchema;
-  execute(input: z.infer<InputSchema>): object | Promise<object>;
+  inputSchema: object;
 };
 
 export type Message = {
@@ -19,7 +14,7 @@ export type Message = {
 export const MessageResponseSchema = z.object({
   thought: z.string(),
   action: z.string(),
-  actionInput: ToolInputSchema,
+  actionInput: z.looseObject({}),
   isFinalAnswer: z.boolean(),
 });
 

@@ -1,14 +1,12 @@
+import type { Client } from "@modelcontextprotocol/client";
 import z from "zod";
 import { Chat } from "./chat.js";
 import {
   MessageResponseSchema,
-  ToolInputSchema,
   type Message,
   type MessageResponse,
   type Tool,
-  type ToolInput,
 } from "./types.js";
-import type { Client } from "@modelcontextprotocol/client";
 
 /**
  * Represents a ReAct agent.
@@ -20,31 +18,45 @@ export class Agent {
    * @property {Message[]}
    */
   private readonly messages: Message[] = [];
+  private readonly tools: Tool[] = [];
 
   /**
    * Creates a new Agent instance.
    * @constructor
    * @param {Client} mcpClient - The MCP client instance used for tools.
    * @param {Chat} chat - The Chat instance used by the agent.
-   * @param {Tool[]} tools - The tools that the agent can execute.
    * @param {number} maxTurns - The maximum number of turns per query before the agent stops.
    * @example
    * const agent = new Agent(
+   *   await createAndConnectClient(
+   *     new StreamableHTTPClientTransport(
+   *       new URL("http://localhost:3000/mcp"),
+   * .   )
+   *   ),
    *   new Chat("http://localhost:8080/v1", "dummy"),
-   *   [addElementToApp, getAllElements],
    *   10,
    * );
    */
   constructor(
     private readonly mcpClient: Client,
     private readonly chat: Chat,
-    private readonly tools: Tool[],
     private readonly maxTurns: number,
-  ) {
+  ) {}
+
+  async initialize() {
+    const { tools } = await this.mcpClient.listTools();
+    for (const tool of tools) {
+      this.tools.push({
+        name: tool.name,
+        description: tool.description ? tool.description : "none",
+        inputSchema: tool.inputSchema,
+      });
+    }
     this.addAndLogMessage({
       role: "system",
       content: this.getSystemPrompt(),
     });
+    console.log("Successfully initialized the agent");
   }
 
   /**
@@ -161,7 +173,7 @@ ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
         JSON.stringify({
           name: t.name,
           description: t.description,
-          inputSchema: z.toJSONSchema(t.inputSchema),
+          inputSchema: t.inputSchema,
         }),
       )
       .join("\n");
@@ -200,35 +212,14 @@ ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
   private async executeAction(
     parsedResponse: MessageResponse,
   ): Promise<object> {
-    const action = parsedResponse.action;
-    const tool = this.tools.find((t) => t.name === action);
-    if (!tool) {
-      return {
-        success: false,
-        data: {
-          errorMessage: `Tool ${action} not found.`,
-        },
-      };
-    }
+    // TODO: error handling
 
-    // the following doesn't use safeParse, because it has already been validated using MessageResponseSchema
-    const parsedActionInput: ToolInput = ToolInputSchema.parse(
-      parsedResponse.actionInput,
-    );
+    const result = await this.mcpClient.callTool({
+      name: parsedResponse.action,
+      arguments: parsedResponse.actionInput,
+    });
 
-    const toolInput = tool.inputSchema.safeParse(parsedActionInput);
-    if (!toolInput.success) {
-      return {
-        success: false,
-        data: {
-          errorMessage:
-            "actionInput did not match the parameter input schema of the specified tool.\n" +
-            toolInput.error,
-        },
-      };
-    }
-    const parsedToolInput = toolInput.data;
-    const observation: object = await tool.execute(parsedToolInput);
+    const observation: object = result;
     return observation;
   }
 }
