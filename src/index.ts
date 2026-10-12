@@ -5,7 +5,7 @@ import app from "./mcp/server.js";
 import { createAndConnectClient } from "./mcp/client.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 
-serve(app);
+const server = serve(app);
 
 // create transport, define and connect client
 const transport = new StreamableHTTPClientTransport(
@@ -31,3 +31,4 @@ await agent.query("Now add a button to the app.");
 // disconnect cleanly
 await transport.terminateSession();
 await mcpClient.close();
+server.close();
