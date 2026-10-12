@@ -42,6 +42,9 @@ export class Agent {
     private readonly maxTurns: number,
   ) {}
 
+  /**
+   * Initializes the Agent. Must be called before using query!
+   */
   async initialize() {
     this.addAndLogMessage({
       role: "system",
@@ -130,6 +133,7 @@ export class Agent {
   /**
    * Assembles and returns the system prompt.
    * @method
+   * @async
    * @returns {Promise<string>} A promise that resolves with the complete system prompt.
    */
   private async getSystemPrompt(): Promise<string> {
@@ -156,6 +160,7 @@ ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
   /**
    * Builds and returns a string that lists all of the agent's tools in JSON format.
    * @method
+   * @async
    * @returns {Promise<string>} A Promise that resolves with the list of the agent's tools in JSON format.
    */
   private async getToolString(): Promise<string> {
@@ -199,7 +204,7 @@ ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
    * @method
    * @async
    * @param {MessageResponse} parsedResponse - The parsed MessageResponse object that contains the tool to be executed.
-   * @returns {Promise<object>} A promise that resolves with an object that represents the result of the execution.
+   * @returns {Promise<Observation>} A promise that resolves with an observation that contains informations about tool execution and potential errors.
    */
   private async executeAction(
     parsedResponse: MessageResponse,

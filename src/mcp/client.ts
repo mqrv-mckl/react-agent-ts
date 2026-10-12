@@ -3,6 +3,12 @@ import {
   StreamableHTTPClientTransport,
 } from "@modelcontextprotocol/client";
 
+/**
+ * Creates a new MCP client and connects it to a MCP server via HTTP using the given transport instance.
+ *
+ * @param {StreamableHTTPClientTransport} transport - The transport used to connect to a MCP server.
+ * @returns {Promise<Client>} A promise that resolves with the connected client.
+ */
 export async function createAndConnectClient(
   transport: StreamableHTTPClientTransport,
 ): Promise<Client> {

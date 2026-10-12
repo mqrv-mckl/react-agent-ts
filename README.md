@@ -1,6 +1,6 @@
 # ReAct Agent (TS)
 
-A minimal demonstration of a [ReAct](https://doi.org/10.48550/arXiv.2210.03629) agent that uses tool calls to act in a simulated environment.
+A minimal demonstration of a [ReAct](https://doi.org/10.48550/arXiv.2210.03629) agent that uses tool calls via MCP to act in a simulated environment.
 
 ## Overview
 
@@ -16,7 +16,8 @@ Parts of the implementation are inspired by:
 ## Structure
 
 - `src/agent`: agent logic (ReAct loop, tool call handling)
-- `src/environment`: files that simulate the web app builder environment and the tools the agent can call
+- `src/environment`: files that simulate the web app builder environment
+- `src/mcp`: factories for MCP server and MCP client including tool definition
 
 ## Model
 
@@ -28,8 +29,8 @@ The project was developed and tested with [llama.cpp](https://github.com/ggml-or
 flowchart
     IN[User Input / Prompt] -->|add to| MH[Message History] -->|send to| LLM -->|returns| Res[Response] --> V[Validation using MessageResponseSchema]
     V -->|correct format| CheckFinal[Check if final answer] -->|yes| Stop
-    CheckFinal -->|no| Exec[ExecuteTool] -->|returns| Result[Object including information about success and other]
+    CheckFinal -->|no| Exec[Execute tool using MCP client] -->|returns| Result[Observation including information about success and other]
     V -->|incorrect format| Result
     Result --> LastAnsw[Check if turn limit reached] -->|yes| Stop
-    LastAnsw -->|no: add result object to...| MH
+    LastAnsw -->|no: add observation to...| MH
 ```
