@@ -1,6 +1,19 @@
 import OpenAI from "openai";
-import z from "zod";
+import z, { ZodObject } from "zod";
 import { MessageResponseSchema, type Message } from "./types.js";
+
+/**
+ * Represents the resoning effort levels defined by the OpenAI Chat Completions API.
+ * Warning: Not every LLM supports all of them!
+ */
+export enum ReasoningEffort {
+  None = "none",
+  Low = "low",
+  Medium = "medium",
+  High = "high",
+  XHigh = "xhigh",
+  Max = "max",
+}
 
 /**
  * Represents an interface to interact with an LLM through an OpenAI-compatible API.
@@ -38,17 +51,21 @@ export class Chat {
    * @returns {Promise<string>} A promise that resolves with the raw content of the LLM's reply.
    * @throws {Error} If the LLM returns an empty response.
    */
-  async sendMessage(messages: Message[]): Promise<string> {
+  async sendMessage(
+    messages: Message[],
+    responseSchema: ZodObject,
+    reasoningEffort: ReasoningEffort = ReasoningEffort.Low,
+  ): Promise<string> {
     const response = await this.llm.chat.completions.create({
       messages: messages,
       model: "unsloth/Qwen3.8-27B-GGUF:UD-Q2_K_XL",
-      reasoning_effort: "low",
+      reasoning_effort: reasoningEffort,
       response_format: {
         type: "json_schema",
         json_schema: {
           name: "message_response",
           strict: false,
-          schema: z.toJSONSchema(MessageResponseSchema),
+          schema: z.toJSONSchema(responseSchema),
         },
       },
     });

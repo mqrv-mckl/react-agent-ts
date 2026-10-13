@@ -1,9 +1,8 @@
 import type { Client } from "@modelcontextprotocol/client";
 import z from "zod";
-import { Chat } from "./chat.js";
+import { Chat, ReasoningEffort } from "./chat.js";
 import {
   MessageResponseSchema,
-  type Message,
   type MessageResponse,
   type Observation,
 } from "./types.js";
@@ -61,7 +60,10 @@ export class Agent {
     this.chatHistory.addAndLogMessage({ role: "user", content: prompt });
 
     for (let i = 0; i < this.maxTurns; i++) {
-      const rawResponse = await this.chat.sendMessage(this.chatHistory.get());
+      const rawResponse = await this.chat.sendMessage(
+        this.chatHistory.get(),
+        MessageResponseSchema,
+      );
 
       let jsonResponse;
       try {
