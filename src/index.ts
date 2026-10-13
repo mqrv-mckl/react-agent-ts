@@ -15,10 +15,12 @@ const transport = new StreamableHTTPClientTransport(
 const mcpClient = await createAndConnectClient(transport);
 
 // define the agent
+const llmBaseURL = "http://localhost:8080/v1";
+const llmApiKey = "dummy";
 const agent = new Agent(
   mcpClient,
-  new Chat("http://localhost:8080/v1", "dummy"),
-  new ChatHistory(0, false), // TODO: change arguments after implementing (auto) summary
+  new Chat(llmBaseURL, llmApiKey),
+  new ChatHistory(0, false, new Chat(llmBaseURL, llmApiKey)), // TODO: change arguments after implementing (auto) summary
   10,
 );
 
