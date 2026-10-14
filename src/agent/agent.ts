@@ -98,6 +98,12 @@ export class Agent {
           content: JSON.stringify(parsedResponse),
         });
 
+        // TEPORARY: test summarization
+        if (i % 2 === 0) {
+          console.log("******* trying to summarize the chat history...");
+          await this.chatHistory.summarize();
+        }
+
         // check if final answer
         if (parsedResponse.isFinalAnswer) {
           console.log("Final Answer:", parsedResponse.thought, "\n");

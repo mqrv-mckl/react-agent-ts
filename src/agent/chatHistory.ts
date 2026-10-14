@@ -11,7 +11,7 @@ export class ChatHistory {
    * The messages in the chat history.
    * @property {Message[]}
    */
-  private readonly messages: Message[] = [];
+  private messages: Message[] = [];
 
   constructor(
     /**
@@ -54,8 +54,26 @@ export class ChatHistory {
 
   /**
    * Summarizes the messages using the LLM.
+   * Only works, if there's at least one final anwer in the chat history.
    */
   async summarize(): Promise<void> {
+    // check if chat history structure is invalid
+    if (!this.isChatHistoryValid()) {
+      console.warn(
+        "Invalid chat history structure. Summarization couldn't be done.",
+      );
+      return;
+    }
+
+    // check if there already is a final answer
+    if (this.getIndexOfLatestFinalAnwer() === -1) {
+      console.warn(
+        "Invalid chat history. At least one final answer is required for summarization.",
+      );
+      return;
+    }
+
+    // define response schema and system prompt
     const SummaryResponseSchema = z.object({
       querySummary: z.string().describe("A summary of all the user queries."),
       completedTasksSummary: z
@@ -69,6 +87,70 @@ Your task is to summarize chat histories between the user and the assistant. The
 You should now summarize and output the information in the following format:
 ${JSON.stringify(z.toJSONSchema(SummaryResponseSchema))}
 `;
+
+    // separate complete queries from the system prompt and a potential incomplete query
+    const completeQueries = this.messages.slice(
+      1,
+      this.getIndexOfLatestFinalAnwer() + 1,
+    );
+
+    // assemble message for the LLM
+    const summarizationInstructions: Message[] = [];
+    summarizationInstructions.push({
+      role: "system",
+      content: summarizationSystemPrompt,
+    });
+    summarizationInstructions.push({
+      role: "user",
+      content: JSON.stringify(completeQueries),
+    });
+
+    // get summary from the LLM
+    const response = await this.chat.sendMessage(
+      summarizationInstructions,
+      SummaryResponseSchema,
+    );
+
+    // parse to JSON
+    let jsonResponse;
+    try {
+      jsonResponse = JSON.parse(response);
+    } catch {
+      jsonResponse = undefined;
+    }
+
+    // parse response
+    const parsedResponse = SummaryResponseSchema.safeParse(jsonResponse);
+    if (!parsedResponse.success) {
+      throw new Error(
+        "Invalid response format! Details:\n" + parsedResponse.error,
+      );
+    }
+
+    // assemble and assign summarized message list
+    const newMessageList: Message[] = [];
+    newMessageList.push(this.messages[0]!); // add system prompt
+    newMessageList.push({
+      role: "user",
+      content: parsedResponse.data.querySummary,
+    });
+    newMessageList.push({
+      role: "assistant",
+      content: parsedResponse.data.completedTasksSummary,
+    });
+    // if a query without final answer exists, append the messages after the summary
+    if (this.messages.length > this.getIndexOfLatestFinalAnwer() + 1) {
+      newMessageList.push(
+        ...this.messages.slice(this.getIndexOfLatestFinalAnwer() + 1),
+      );
+    }
+
+    this.messages = newMessageList;
+
+    console.log("----------------------------------------------");
+    console.log("Chat history was summarized. Summarized version:");
+    for (const m of newMessageList) console.log(m);
+    console.log("----------------------------------------------");
   }
 
   private getIndexOfLatestFinalAnwer(): number {
@@ -84,5 +166,16 @@ ${JSON.stringify(z.toJSONSchema(SummaryResponseSchema))}
       }
       return false;
     });
+  }
+
+  /**
+   * Indicates whether the chat history structure is valid.
+   * @method
+   * @returns true, if the message list begins with a message with role="system" and another message with role="user"
+   */
+  private isChatHistoryValid(): boolean {
+    return (
+      this.messages[0]?.role === "system" && this.messages[1]?.role === "user"
+    );
   }
 }
