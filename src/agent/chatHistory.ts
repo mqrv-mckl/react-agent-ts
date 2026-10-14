@@ -1,6 +1,6 @@
 import z from "zod";
 import type { Chat } from "./chat.js";
-import type { Message } from "./types.js";
+import { MessageResponseSchema, type Message } from "./types.js";
 
 /**
  * Represents a chat history between user and LLM.
@@ -69,5 +69,20 @@ Your task is to summarize chat histories between the user and the assistant. The
 You should now summarize and output the information in the following format:
 ${JSON.stringify(z.toJSONSchema(SummaryResponseSchema))}
 `;
+  }
+
+  private getIndexOfLatestFinalAnwer(): number {
+    return this.messages.findLastIndex((message) => {
+      if (message.content.startsWith("{")) {
+        const parsedMessage = MessageResponseSchema.safeParse(
+          JSON.parse(message.content),
+        );
+        if (parsedMessage.success) {
+          return parsedMessage.data.isFinalAnswer;
+        }
+        return false;
+      }
+      return false;
+    });
   }
 }
