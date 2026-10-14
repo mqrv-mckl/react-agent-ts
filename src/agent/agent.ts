@@ -60,59 +60,30 @@ export class Agent {
     this.chatHistory.addAndLogMessage({ role: "user", content: prompt });
 
     for (let i = 0; i < this.maxTurns; i++) {
-      const rawResponse = await this.chat.sendMessage(
-        this.chatHistory.get(),
-        MessageResponseSchema,
-      );
-
-      let jsonResponse;
-      try {
-        jsonResponse = JSON.parse(rawResponse);
-      } catch {
-        jsonResponse = undefined;
-      }
-
-      const response = await MessageResponseSchema.safeParseAsync(jsonResponse);
       let observation: Observation;
 
-      if (!response.success) {
-        // if response format was invalid, add rawResponse and observation
-        this.chatHistory.addAndLogMessage({
-          role: "assistant",
-          content: rawResponse,
-        });
-        observation = {
-          success: false,
-          data: {
-            errorMessage:
-              "Invalid message response format! Details:\n" + response.error,
-          },
-        };
-      } else {
-        // if response format was valid ...
-        const parsedResponse = response.data;
+      // retrieve parsed response
+      try {
+        const response = await this.chat.getParsedResponse(
+          this.chatHistory.get(),
+          MessageResponseSchema,
+        );
 
         // add the LLM's response to messages
         this.chatHistory.addAndLogMessage({
           role: "assistant",
-          content: JSON.stringify(parsedResponse),
+          content: JSON.stringify(response),
         });
 
-        // TEPORARY: test summarization
-        if (i % 2 === 0) {
-          console.log("******* trying to summarize the chat history...");
-          await this.chatHistory.summarize();
-        }
-
         // check if final answer
-        if (parsedResponse.isFinalAnswer) {
-          console.log("Final Answer:", parsedResponse.thought, "\n");
+        if (response.isFinalAnswer) {
+          console.log("Final Answer:", response.thought, "\n");
           return;
         }
 
         // execute action
         try {
-          observation = await this.executeAction(parsedResponse);
+          observation = await this.executeAction(response);
         } catch (e) {
           observation = {
             success: false,
@@ -123,6 +94,21 @@ export class Agent {
             },
           };
         }
+      } catch (e) {
+        // TODO: use more specific error handling in here, when custom errors in chat.ts have been implemented
+
+        this.chatHistory.addAndLogMessage({
+          role: "assistant",
+          content: "... error while getting response",
+        });
+        observation = {
+          success: false,
+          data: {
+            errorMessage:
+              "Error while getting response! Details:\n" +
+              (e instanceof Error ? ": " + e.message : "."),
+          },
+        };
       }
 
       // add observation to messages
@@ -130,6 +116,12 @@ export class Agent {
         role: "user",
         content: JSON.stringify(observation),
       });
+
+      // TEPORARY: test summarization
+      if (i % 2 === 0) {
+        console.log("******* trying to summarize the chat history...");
+        await this.chatHistory.summarize();
+      }
 
       // check if turn limit reached
       if (i === this.maxTurns - 1) {

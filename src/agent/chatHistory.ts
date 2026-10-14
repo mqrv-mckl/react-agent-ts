@@ -55,6 +55,8 @@ export class ChatHistory {
   /**
    * Summarizes the messages using the LLM.
    * Only works, if there's at least one final anwer in the chat history.
+   * @method
+   * @async
    */
   async summarize(): Promise<void> {
     // check if chat history structure is invalid
@@ -82,6 +84,7 @@ export class ChatHistory {
           "A summary of all the things the assistant did to complete its tasks.",
         ),
     });
+    type SummaryResponse = z.infer<typeof SummaryResponseSchema>;
     const summarizationSystemPrompt = `
 Your task is to summarize chat histories between the user and the assistant. These consist of alternating messages between the user and the assistant. All messages from the user that consist of a simple string are queries. All others are observations (e.g., results from a tool that was run). Once the Assistant has completed the task specified in a query sent by the user, it sends a response in which isFinalAnswer is set to true and the thought field contains a brief summary of the completed tasks.
 You should now summarize and output the information in the following format:
@@ -106,37 +109,21 @@ ${JSON.stringify(z.toJSONSchema(SummaryResponseSchema))}
     });
 
     // get summary from the LLM
-    const response = await this.chat.sendMessage(
+    const response: SummaryResponse = await this.chat.getParsedResponse(
       summarizationInstructions,
       SummaryResponseSchema,
     );
-
-    // parse to JSON
-    let jsonResponse;
-    try {
-      jsonResponse = JSON.parse(response);
-    } catch {
-      jsonResponse = undefined;
-    }
-
-    // parse response
-    const parsedResponse = SummaryResponseSchema.safeParse(jsonResponse);
-    if (!parsedResponse.success) {
-      throw new Error(
-        "Invalid response format! Details:\n" + parsedResponse.error,
-      );
-    }
 
     // assemble and assign summarized message list
     const newMessageList: Message[] = [];
     newMessageList.push(this.messages[0]!); // add system prompt
     newMessageList.push({
       role: "user",
-      content: parsedResponse.data.querySummary,
+      content: response.querySummary,
     });
     newMessageList.push({
       role: "assistant",
-      content: parsedResponse.data.completedTasksSummary,
+      content: response.completedTasksSummary,
     });
     // if a query without final answer exists, append the messages after the summary
     if (this.messages.length > this.getIndexOfLatestFinalAnwer() + 1) {
