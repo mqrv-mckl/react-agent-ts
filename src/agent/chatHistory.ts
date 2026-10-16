@@ -1,8 +1,10 @@
 import z from "zod";
+import { estimateTokenCount, isWithinTokenLimit } from "tokenx";
 import type { Chat } from "./chat.js";
 import {
   MessageResponseSchema,
   SummaryResponseSchema,
+  type AutoSummaryOptions,
   type Message,
   type SummaryResponse,
 } from "./types.js";
@@ -18,24 +20,21 @@ export class ChatHistory {
    */
   private messages: Message[] = [];
 
+  /**
+   * Creates a new ChatHistory instance.
+   * @param {Chat} chat - The Chat instance used to summarize the chat history.
+   * @param {boolean} autoSummary - True if context summarization should be triggered automatically.
+   * @param {AutoSummaryOptions} autoSummaryOptions - The options for auto summary (must be provided if autoSummary=true)
+   * @throws {Error} If autoSummary=true and autoSummaryOptions was not provided.
+   */
   constructor(
-    /**
-     * The context length in tokens.
-     * @property {number}
-     */
-    private readonly contextLength: number,
-
-    /**
-     * True if context summarization should be triggered automatically.
-     * @property {boolean}
-     */
-    private readonly autoSummary: boolean,
-
-    /**
-     * The Chat instance used to summarize the chat history.
-     */
     private readonly chat: Chat,
-  ) {}
+    private readonly autoSummary: boolean,
+    private readonly autoSummaryOptions?: AutoSummaryOptions,
+  ) {
+    if (autoSummary && autoSummaryOptions === undefined)
+      throw new Error("Auto summary needs autoSummaryOptions!");
+  }
 
   get(): Message[] {
     return this.messages;
@@ -46,15 +45,50 @@ export class ChatHistory {
    * @method
    * @param {Message} message - The message to be added to the history and logged.
    */
-  addAndLogMessage(message: Message): void {
+  async addAndLogMessage(message: Message): Promise<void> {
     this.messages.push(message);
     console.log("Added message to chat history:");
     console.log(message);
 
-    // TODO: implement, when summarize method is implemented
-    // if (... && autoSummary) {
-    //   this.summarize();
-    // }
+    if (this.autoSummary) await this.handleAutoSummary();
+  }
+
+  /**
+   * Handles the auto summarization based on the estimated token count of the message list.
+   * @method
+   * @async
+   */
+  private async handleAutoSummary(): Promise<void> {
+    // TODO: remove the debugging log statements and comment everything
+    const tokenLimit = Math.trunc(
+      0.005 * this.autoSummaryOptions!.contextLength,
+    );
+    const currentMessageString = JSON.stringify(this.messages);
+    const tokenEstimationOptions = {
+      defaultCharsPerToken: this.autoSummaryOptions!.charactersPerToken,
+    };
+
+    const estimatedTokenCount = estimateTokenCount(
+      currentMessageString,
+      tokenEstimationOptions,
+    );
+
+    console.log(
+      `estimateTokenCount/tokenLimit: ${estimatedTokenCount}/${tokenLimit} (≈${Math.round((estimatedTokenCount / tokenLimit) * 100)}%)`,
+    );
+
+    if (
+      !isWithinTokenLimit(
+        currentMessageString,
+        tokenLimit,
+        tokenEstimationOptions,
+      )
+    ) {
+      console.log(
+        `Token limit reached (${estimatedTokenCount}/${tokenLimit}). Summarizing...`,
+      );
+      await this.summarize();
+    }
   }
 
   /**
@@ -171,11 +205,11 @@ ${JSON.stringify(z.toJSONSchema(SummaryResponseSchema))}`;
     newMessageList.push(this.messages[0]!); // add system prompt
     newMessageList.push({
       role: "user",
-      content: summaryResponse.querySummary,
+      content: "Summary: " + summaryResponse.querySummary,
     });
     newMessageList.push({
       role: "assistant",
-      content: summaryResponse.completedTasksSummary,
+      content: "Summary: " + summaryResponse.completedTasksSummary,
     });
     // if a query without a final answer exists, append the messages after the summary
     if (this.messages.length > this.getIndexOfLatestFinalAnswer() + 1) {

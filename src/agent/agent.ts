@@ -42,7 +42,7 @@ export class Agent {
    * Initializes the Agent. Must be called before using query!
    */
   async initialize() {
-    this.chatHistory.addAndLogMessage({
+    await this.chatHistory.addAndLogMessage({
       role: "system",
       content: await this.getSystemPrompt(),
     });
@@ -57,7 +57,7 @@ export class Agent {
    * @returns {Promise<void>}
    */
   async query(prompt: string): Promise<void> {
-    this.chatHistory.addAndLogMessage({ role: "user", content: prompt });
+    await this.chatHistory.addAndLogMessage({ role: "user", content: prompt });
 
     for (let i = 0; i < this.maxTurns; i++) {
       let observation: Observation;
@@ -67,10 +67,11 @@ export class Agent {
         const response = await this.chat.getParsedResponse(
           this.chatHistory.get(),
           MessageResponseSchema,
+          ReasoningEffort.Medium,
         );
 
         // add the LLM's response to messages
-        this.chatHistory.addAndLogMessage({
+        await this.chatHistory.addAndLogMessage({
           role: "assistant",
           content: JSON.stringify(response),
         });
@@ -97,7 +98,7 @@ export class Agent {
       } catch (e) {
         // TODO: use more specific error handling in here, when custom errors in chat.ts have been implemented
 
-        this.chatHistory.addAndLogMessage({
+        await this.chatHistory.addAndLogMessage({
           role: "assistant",
           content: "... error while getting response",
         });
@@ -112,16 +113,16 @@ export class Agent {
       }
 
       // add observation to messages
-      this.chatHistory.addAndLogMessage({
+      await this.chatHistory.addAndLogMessage({
         role: "user",
         content: JSON.stringify(observation),
       });
 
       // TEPORARY: test summarization
-      if (i % 2 === 0) {
-        console.log("******* trying to summarize the chat history...");
-        await this.chatHistory.summarize();
-      }
+      // if (i % 2 === 0) {
+      //   console.log("******* trying to summarize the chat history...");
+      //   await this.chatHistory.summarize();
+      // }
 
       // check if turn limit reached
       if (i === this.maxTurns - 1) {
@@ -147,6 +148,7 @@ Use Action to run one of the actions available to you.
 After that you'll get the Observation, which will be the result of running those actions.
 
 Your final answer must only contain a short summary of what you did. Put this summary into the thought-property of the returned object. Other properties like action and actionInput must stay empty in the final answer.
+Note that the user can only see final answers. If you once send a response with isFinalAnswer=true, you can't send another answer, so ensure to always add all information in your final answer.
 
 Your available actions are:
 

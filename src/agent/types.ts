@@ -29,3 +29,10 @@ export type Observation = {
   success: boolean;
   data: object;
 };
+
+export type AutoSummaryOptions = {
+  // the context length in tokens
+  contextLength: number;
+  // the average number of characters per token
+  charactersPerToken: number;
+};
