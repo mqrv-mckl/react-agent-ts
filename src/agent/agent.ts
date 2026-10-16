@@ -20,16 +20,6 @@ export class Agent {
    * @param {Chat} chat - The Chat instance used by the agent.
    * @param {ChatHistory} chatHistory - The ChatHistory instance used by the agent.
    * @param {number} maxTurns - The maximum number of turns per query before the agent stops.
-   * @example
-   * const agent = new Agent(
-   *   await createAndConnectClient(
-   *     new StreamableHTTPClientTransport(
-   *       new URL("http://localhost:3000/mcp"),
-   * .   )
-   *   ),
-   *   new Chat("http://localhost:8080/v1", "dummy"),
-   *   10,
-   * );
    */
   constructor(
     private readonly mcpClient: Client,
@@ -40,6 +30,8 @@ export class Agent {
 
   /**
    * Initializes the Agent. Must be called before using query!
+   * @method
+   * @async
    */
   async initialize() {
     await this.chatHistory.addAndLogMessage({
@@ -67,7 +59,6 @@ export class Agent {
         const response = await this.chat.getParsedResponse(
           this.chatHistory.get(),
           MessageResponseSchema,
-          ReasoningEffort.Medium,
         );
 
         // add the LLM's response to messages
@@ -117,12 +108,6 @@ export class Agent {
         role: "user",
         content: JSON.stringify(observation),
       });
-
-      // TEPORARY: test summarization
-      // if (i % 2 === 0) {
-      //   console.log("******* trying to summarize the chat history...");
-      //   await this.chatHistory.summarize();
-      // }
 
       // check if turn limit reached
       if (i === this.maxTurns - 1) {
