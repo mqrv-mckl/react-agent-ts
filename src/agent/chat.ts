@@ -74,9 +74,6 @@ export class Chat {
       },
     });
 
-    // TODO: consider implementing custom errors for the following three throw statements
-    // (to help enable the caller to handle them separately)
-
     // check if the response is empty
     const rawResponse = response.choices[0]?.message.content;
     if (!rawResponse) {

@@ -102,20 +102,30 @@ export class ChatHistory {
     // check if summarization is possible
     if (!this.isSummarizationPossible()) return;
 
-    // get summary from the LLM
-    const response: SummaryResponse = await this.chat.getParsedResponse(
-      this.getSummarizationInstructions(),
-      SummaryResponseSchema,
-    );
+    try {
+      // get summary from the LLM
+      const response: SummaryResponse = await this.chat.getParsedResponse(
+        this.getSummarizationInstructions(),
+        SummaryResponseSchema,
+      );
+      // assign summarized message list
+      this.messages = this.assembleSummarizedMessageList(response);
 
-    // assign summarized message list
-    this.messages = this.assembleSummarizedMessageList(response);
-
-    // log to console
-    console.log("----------------------------------------------");
-    console.log("Chat history was summarized. Summarized version:");
-    for (const m of this.messages) console.log(m);
-    console.log("----------------------------------------------");
+      // log to console
+      console.log("----------------------------------------------");
+      console.log("Chat history was summarized. Summarized version:");
+      for (const m of this.messages) console.log(m);
+      console.log("----------------------------------------------");
+    } catch (e) {
+      if (e instanceof Error) {
+        console.error(
+          "An Error ocurred during summarization of the chat history:\n" +
+            e.message,
+        );
+      } else {
+        throw e;
+      }
+    }
   }
 
   /**

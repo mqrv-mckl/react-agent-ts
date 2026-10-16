@@ -1,6 +1,6 @@
 import type { Client } from "@modelcontextprotocol/client";
 import z from "zod";
-import { Chat, ReasoningEffort } from "./chat.js";
+import { Chat } from "./chat.js";
 import {
   MessageResponseSchema,
   type MessageResponse,
@@ -87,20 +87,20 @@ export class Agent {
           };
         }
       } catch (e) {
-        // TODO: use more specific error handling in here, when custom errors in chat.ts have been implemented
-
-        await this.chatHistory.addAndLogMessage({
-          role: "assistant",
-          content: "... error while getting response",
-        });
-        observation = {
-          success: false,
-          data: {
-            errorMessage:
-              "Error while getting response! Details:\n" +
-              (e instanceof Error ? ": " + e.message : "."),
-          },
-        };
+        if (e instanceof Error) {
+          await this.chatHistory.addAndLogMessage({
+            role: "assistant",
+            content: "(Error while retrieving the response)",
+          });
+          observation = {
+            success: false,
+            data: {
+              errorMessage: e.message,
+            },
+          };
+        } else {
+          throw e;
+        }
       }
 
       // add observation to messages
