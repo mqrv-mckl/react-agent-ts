@@ -1,12 +1,12 @@
 import type { Client } from "@modelcontextprotocol/client";
 import z from "zod";
-import { Chat } from "./chat.js";
+import { Chat, ReasoningEffort } from "./chat.js";
 import {
   MessageResponseSchema,
-  type Message,
   type MessageResponse,
   type Observation,
 } from "./types.js";
+import type { ChatHistory } from "./chatHistory.js";
 
 /**
  * Represents a ReAct agent.
@@ -14,39 +14,27 @@ import {
  */
 export class Agent {
   /**
-   * The message history of the agent, including the system prompt as well as messages by the user and the LLM's responses.
-   * @property {Message[]}
-   */
-  private readonly messages: Message[] = [];
-
-  /**
    * Creates a new Agent instance.
    * @constructor
    * @param {Client} mcpClient - The MCP client instance used for tools.
    * @param {Chat} chat - The Chat instance used by the agent.
+   * @param {ChatHistory} chatHistory - The ChatHistory instance used by the agent.
    * @param {number} maxTurns - The maximum number of turns per query before the agent stops.
-   * @example
-   * const agent = new Agent(
-   *   await createAndConnectClient(
-   *     new StreamableHTTPClientTransport(
-   *       new URL("http://localhost:3000/mcp"),
-   * .   )
-   *   ),
-   *   new Chat("http://localhost:8080/v1", "dummy"),
-   *   10,
-   * );
    */
   constructor(
     private readonly mcpClient: Client,
     private readonly chat: Chat,
+    private readonly chatHistory: ChatHistory,
     private readonly maxTurns: number,
   ) {}
 
   /**
    * Initializes the Agent. Must be called before using query!
+   * @method
+   * @async
    */
   async initialize() {
-    this.addAndLogMessage({
+    await this.chatHistory.addAndLogMessage({
       role: "system",
       content: await this.getSystemPrompt(),
     });
@@ -61,50 +49,33 @@ export class Agent {
    * @returns {Promise<void>}
    */
   async query(prompt: string): Promise<void> {
-    this.addAndLogMessage({ role: "user", content: prompt });
+    await this.chatHistory.addAndLogMessage({ role: "user", content: prompt });
 
     for (let i = 0; i < this.maxTurns; i++) {
-      const rawResponse = await this.chat.sendMessage(this.messages);
-
-      let jsonResponse;
-      try {
-        jsonResponse = JSON.parse(rawResponse);
-      } catch {
-        jsonResponse = undefined;
-      }
-
-      const response = await MessageResponseSchema.safeParseAsync(jsonResponse);
       let observation: Observation;
 
-      if (!response.success) {
-        // if response format was invalid, add rawResponse and observation
-        this.addAndLogMessage({ role: "assistant", content: rawResponse });
-        observation = {
-          success: false,
-          data: {
-            errorMessage:
-              "Invalid message response format! Details:\n" + response.error,
-          },
-        };
-      } else {
-        // if response format was valid ...
-        const parsedResponse = response.data;
+      // retrieve parsed response
+      try {
+        const response = await this.chat.getParsedResponse(
+          this.chatHistory.get(),
+          MessageResponseSchema,
+        );
 
         // add the LLM's response to messages
-        this.addAndLogMessage({
+        await this.chatHistory.addAndLogMessage({
           role: "assistant",
-          content: JSON.stringify(parsedResponse),
+          content: JSON.stringify(response),
         });
 
         // check if final answer
-        if (parsedResponse.isFinalAnswer) {
-          console.log("Final Answer:", parsedResponse.thought, "\n");
+        if (response.isFinalAnswer) {
+          console.log("Final Answer:", response.thought, "\n");
           return;
         }
 
         // execute action
         try {
-          observation = await this.executeAction(parsedResponse);
+          observation = await this.executeAction(response);
         } catch (e) {
           observation = {
             success: false,
@@ -115,10 +86,25 @@ export class Agent {
             },
           };
         }
+      } catch (e) {
+        // TODO: use more specific error handling in here, when custom errors in chat.ts have been implemented
+
+        await this.chatHistory.addAndLogMessage({
+          role: "assistant",
+          content: "... error while getting response",
+        });
+        observation = {
+          success: false,
+          data: {
+            errorMessage:
+              "Error while getting response! Details:\n" +
+              (e instanceof Error ? ": " + e.message : "."),
+          },
+        };
       }
 
       // add observation to messages
-      this.addAndLogMessage({
+      await this.chatHistory.addAndLogMessage({
         role: "user",
         content: JSON.stringify(observation),
       });
@@ -147,6 +133,7 @@ Use Action to run one of the actions available to you.
 After that you'll get the Observation, which will be the result of running those actions.
 
 Your final answer must only contain a short summary of what you did. Put this summary into the thought-property of the returned object. Other properties like action and actionInput must stay empty in the final answer.
+Note that the user can only see final answers. If you once send a response with isFinalAnswer=true, you can't send another answer, so ensure to always add all information in your final answer.
 
 Your available actions are:
 
@@ -174,28 +161,6 @@ ${JSON.stringify(z.toJSONSchema(MessageResponseSchema))}
         }),
       )
       .join("\n");
-  }
-
-  /**
-   * Logs the latest entry of the message history to the console.
-   * @method
-   */
-  private logLatestMessage(): void {
-    console.log("Added the following to messages[]:");
-    console.log(this.messages[this.messages.length - 1], "\n");
-  }
-
-  /**
-   * Adds a new message to the message history and logs it to the console.
-   * @method
-   * @param {Message} message - The message to be added to the history and logged.
-   */
-  private addAndLogMessage(message: Message): void {
-    this.messages.push({
-      role: message.role,
-      content: message.content,
-    });
-    this.logLatestMessage();
   }
 
   /**
